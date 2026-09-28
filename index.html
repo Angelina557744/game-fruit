@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>2048: Фруктовый сад</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://yandex.ru/games/sdk/v2"></script>
+</head>
+<body>
+<main class="game">
+  <header class="game__header">
+    <h1 class="game__title" data-i18n="title">Фруктовый сад</h1>
+    <div class="scores">
+      <div class="score">
+        <span class="score__label" data-i18n="score">Счёт</span>
+        <span class="score__value" data-score="current">0</span>
+      </div>
+      <div class="score">
+        <span class="score__label" data-i18n="best">Рекорд</span>
+        <span class="score__value" data-score="best">0</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="board-wrap">
+    <div class="board" id="board"></div>
+    <div class="overlay" aria-hidden="true">
+      <div class="overlay__panel">
+        <h2 class="overlay__title" data-i18n="gameOver">Игра окончена</h2>
+        <p class="overlay__score"><span data-i18n="scoreLabel">Счёт:</span> <span data-overlay-score>0</span></p>
+        <button class="btn btn--primary" data-action="continue" data-i18n="continue">Продолжить за рекламу</button>
+        <button class="btn btn--ghost" data-action="restart" data-i18n="newGame">Новая игра</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn--ghost" data-action="records" data-i18n="records">Рекорды</button>
+    <button class="btn btn--ghost" data-action="undo" disabled>
+      <svg class="btn__icon" viewBox="0 0 24 24"><use href="#icon-undo"/></svg>
+      <span data-i18n="undo">Отменить</span>
+    </button>
+    <button class="btn btn--ghost" data-action="restart">
+      <svg class="btn__icon" viewBox="0 0 24 24"><use href="#icon-restart"/></svg>
+      <span data-i18n="restart">Заново</span>
+    </button>
+    <button class="btn btn--ghost" data-action="hint">
+      <svg class="btn__icon" viewBox="0 0 24 24"><use href="#icon-bulb"/></svg>
+      <span data-i18n="hint">Подсказка</span>
+      <span class="btn__badge" data-hint-count>5</span>
+    </button>
+  </div>
+</main>
+
+<div class="records" id="records" aria-hidden="true">
+  <div class="records__panel">
+    <h2 class="records__title" data-i18n="records">Рекорды</h2>
+    <ol class="records__list" data-records-list></ol>
+    <button class="btn btn--ghost" data-action="records-close" data-i18n="close">Закрыть</button>
+  </div>
+</div>
+
+<div class="modal" id="hint-modal" aria-hidden="true">
+  <div class="modal__panel">
+    <h3 class="modal__title" data-i18n="hintEmptyTitle">Подсказки закончились</h3>
+    <p class="modal__text" data-i18n="hintEmptyText">Посмотрите короткую рекламу, чтобы получить ещё 2 подсказки.</p>
+    <div class="modal__actions">
+      <button class="btn btn--primary" data-action="hint-watch" data-i18n="watchAd">Смотреть рекламу</button>
+      <button class="btn btn--ghost" data-action="hint-close" data-i18n="close">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+    <symbol id="icon-cherry" viewBox="0 0 64 64">
+      <path d="M32 10 C28 10 24 16 20 30 C18 38 16 44 16 48" stroke="#5B8C3E" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <path d="M32 10 C36 10 40 16 44 30 C46 38 48 44 48 48" stroke="#5B8C3E" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <circle cx="16" cy="50" r="10" fill="#E63946"/>
+      <circle cx="48" cy="50" r="10" fill="#C1121F"/>
+      <circle cx="13" cy="47" r="2.5" fill="#FF8A9A" opacity="0.8"/>
+      <circle cx="45" cy="47" r="2.5" fill="#FF8A9A" opacity="0.8"/>
+      <path d="M30 8 C34 4 44 4 46 8 C42 12 34 12 30 8Z" fill="#5B8C3E"/>
+    </symbol>
+
+    <symbol id="icon-bulb" viewBox="0 0 24 24">
+  <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.5.5.8 1.2.9 2h6.2c.1-.8.4-1.5.9-2A6 6 0 0 0 12 3Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+
+    <symbol id="icon-apple" viewBox="0 0 64 64">
+      <path d="M32 18 C22 18 14 26 14 38 C14 50 22 58 32 58 C42 58 50 50 50 38 C50 26 42 18 32 18Z" fill="#EF5350"/>
+      <path d="M32 18 C30 16 28 14 28 10" stroke="#5B3A29" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M30 14 C34 6 46 8 46 12 C42 16 34 16 30 14Z" fill="#66BB6A"/>
+      <circle cx="24" cy="32" r="3" fill="#FFFFFF" opacity="0.35"/>
+    </symbol>
+
+    <symbol id="icon-orange" viewBox="0 0 64 64">
+      <circle cx="32" cy="38" r="22" fill="#FFA726"/>
+      <circle cx="32" cy="38" r="22" fill="none" stroke="#E68A00" stroke-width="1.5"/>
+      <circle cx="24" cy="32" r="3" fill="#FFFFFF" opacity="0.35"/>
+      <path d="M32 16 L32 8" stroke="#5B3A29" stroke-width="3" stroke-linecap="round"/>
+      <path d="M34 12 C38 6 46 8 46 12 C42 16 36 16 34 12Z" fill="#66BB6A"/>
+    </symbol>
+
+    <symbol id="icon-banana" viewBox="0 0 64 64">
+      <path d="M10 22 C10 46 26 56 46 52 C54 50 54 42 46 42 C30 42 20 32 18 20 C16 14 10 16 10 22Z" fill="#FFD54F" stroke="#E6B800" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M14 26 C16 40 26 48 40 48" stroke="#FFF3A6" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7"/>
+    </symbol>
+
+    <symbol id="icon-pear" viewBox="0 0 64 64">
+      <path d="M32 6 C36 6 38 10 36 14 C36 18 44 22 46 34 C48 46 40 58 32 58 C24 58 16 46 18 34 C20 22 28 18 28 14 C26 10 28 6 32 6Z" fill="#AED581"/>
+      <path d="M32 4 L32 12" stroke="#5B3A29" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="24" cy="40" r="2.5" fill="#FFFFFF" opacity="0.4"/>
+    </symbol>
+
+    <symbol id="icon-peach" viewBox="0 0 64 64">
+      <circle cx="32" cy="38" r="22" fill="#FFAB91"/>
+      <path d="M32 16 C34 30 34 46 32 58" stroke="#E68B6B" stroke-width="1.5" fill="none" opacity="0.5"/>
+      <circle cx="24" cy="32" r="3" fill="#FFFFFF" opacity="0.35"/>
+      <path d="M32 16 L32 8" stroke="#5B3A29" stroke-width="3" stroke-linecap="round"/>
+      <path d="M34 12 C38 6 46 8 46 12 C42 16 36 16 34 12Z" fill="#66BB6A"/>
+    </symbol>
+
+    <symbol id="icon-pineapple" viewBox="0 0 64 64">
+      <ellipse cx="32" cy="40" rx="16" ry="20" fill="#FFCA28"/>
+      <g stroke="#E6A800" stroke-width="1.2" opacity="0.55">
+        <path d="M18 32 L46 32 M18 40 L46 40 M18 48 L46 48"/>
+        <path d="M26 22 L26 58 M32 20 L32 60 M38 22 L38 58"/>
+      </g>
+      <path d="M32 6 L24 22 L32 20 L40 22 Z" fill="#66BB6A"/>
+    </symbol>
+
+    <symbol id="icon-watermelon" viewBox="0 0 64 64">
+      <path d="M6 34 A26 26 0 0 0 58 34 Z" fill="#66BB6A"/>
+      <path d="M10 34 A22 22 0 0 0 54 34 Z" fill="#FF8A9A"/>
+      <circle cx="24" cy="42" r="1.6" fill="#3A2A2A"/>
+      <circle cx="32" cy="46" r="1.6" fill="#3A2A2A"/>
+      <circle cx="40" cy="42" r="1.6" fill="#3A2A2A"/>
+      <circle cx="28" cy="50" r="1.6" fill="#3A2A2A"/>
+      <circle cx="36" cy="50" r="1.6" fill="#3A2A2A"/>
+      <circle cx="32" cy="38" r="1.6" fill="#3A2A2A"/>
+    </symbol>
+
+    <symbol id="icon-grapes" viewBox="0 0 64 64">
+      <circle cx="24" cy="30" r="8" fill="#AB47BC"/>
+      <circle cx="40" cy="30" r="8" fill="#AB47BC"/>
+      <circle cx="32" cy="38" r="8" fill="#9C27B0"/>
+      <circle cx="24" cy="46" r="8" fill="#9C27B0"/>
+      <circle cx="40" cy="46" r="8" fill="#8E24AA"/>
+      <circle cx="32" cy="54" r="7" fill="#8E24AA"/>
+      <path d="M32 22 L32 10" stroke="#5B3A29" stroke-width="3" stroke-linecap="round"/>
+      <path d="M34 14 C38 8 48 10 48 14 C44 18 36 18 34 14Z" fill="#66BB6A"/>
+    </symbol>
+
+    <symbol id="icon-coconut" viewBox="0 0 64 64">
+      <path d="M8 40 A24 24 0 0 0 56 40 Z" fill="#A1887F"/>
+      <ellipse cx="32" cy="40" rx="24" ry="5" fill="#F5E6D3"/>
+      <ellipse cx="32" cy="40" rx="18" ry="3" fill="#FFFFFF"/>
+      <path d="M8 40 A24 24 0 0 0 56 40" fill="none" stroke="#8D6E63" stroke-width="1.5"/>
+    </symbol>
+
+    <symbol id="icon-gold-apple" viewBox="0 0 64 64">
+      <defs>
+        <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#FFE066"/>
+          <stop offset="1" stop-color="#FFB300"/>
+        </linearGradient>
+      </defs>
+      <path d="M32 18 C22 18 14 26 14 38 C14 50 22 58 32 58 C42 58 50 50 50 38 C50 26 42 18 32 18Z" fill="url(#goldGrad)"/>
+      <path d="M32 18 C30 16 28 14 28 10" stroke="#8B5A2B" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M30 14 C34 6 46 8 46 12 C42 16 34 16 30 14Z" fill="#66BB6A"/>
+      <circle cx="24" cy="32" r="3" fill="#FFFFFF" opacity="0.5"/>
+    </symbol>
+
+    <symbol id="icon-diamond" viewBox="0 0 64 64">
+      <path d="M16 24 L24 10 L40 10 L48 24 L32 56 Z" fill="#4DD0E1" stroke="#26A0B5" stroke-width="1.5" stroke-linejoin="round"/>
+      <path d="M16 24 L48 24 M24 10 L32 24 L40 10 M32 24 L32 56" stroke="#26A0B5" stroke-width="1.5" fill="none"/>
+      <path d="M24 10 L32 24 L40 10 Z" fill="#B3ECF2" opacity="0.7"/>
+    </symbol>
+
+    <symbol id="icon-crown" viewBox="0 0 64 64">
+      <path d="M10 48 L14 20 L24 32 L32 12 L40 32 L50 20 L54 48 Z" fill="#FFCA28" stroke="#E6A800" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="14" cy="18" r="3.5" fill="#FFE066" stroke="#E6A800" stroke-width="1.5"/>
+      <circle cx="32" cy="10" r="3.5" fill="#FFE066" stroke="#E6A800" stroke-width="1.5"/>
+      <circle cx="50" cy="18" r="3.5" fill="#FFE066" stroke="#E6A800" stroke-width="1.5"/>
+      <rect x="10" y="48" width="44" height="6" rx="2" fill="#E6A800"/>
+    </symbol>
+
+    <symbol id="icon-arrow-left" viewBox="0 0 24 24">
+  <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon-arrow-right" viewBox="0 0 24 24">
+  <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon-arrow-up" viewBox="0 0 24 24">
+  <path d="M6 15l6-6 6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon-arrow-down" viewBox="0 0 24 24">
+  <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon-undo" viewBox="0 0 24 24">
+  <path d="M3 7v6h6" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 13a9 9 0 1 0 3-7" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon-restart" viewBox="0 0 24 24">
+  <path d="M21 12a9 9 0 1 1-3-6.7" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M21 3v6h-6" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+  </svg>
+  <audio id="bg-music" loop preload="auto" src="assets/bg-music.mp3"></audio>
+
+  <audio data-sfx="move"     preload="auto" src="assets/move.mp3"></audio>
+  <audio data-sfx="merge"    preload="auto" src="assets/merge.mp3"></audio>
+  <audio data-sfx="spawn"    preload="auto" src="assets/spawn.mp3"></audio>
+  <audio data-sfx="button"   preload="auto" src="assets/button.mp3"></audio>
+  <audio data-sfx="undo"     preload="auto" src="assets/undo.mp3"></audio>
+  <audio data-sfx="hint"     preload="auto" src="assets/hint.mp3"></audio>
+  <audio data-sfx="win"      preload="auto" src="assets/win.mp3"></audio>
+  <audio data-sfx="gameover" preload="auto" src="assets/gameover.mp3"></audio>
+  <audio data-sfx="record"   preload="auto" src="assets/record.mp3"></audio>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
