@@ -1,6 +1,6 @@
 import { mountBoard } from './render.js';
 import {
-  restart, move, undo, on, canUndo,
+  restart, move, undo, on, canUndoFree, canUndoPaid,
   applyUndoReward, continueAfterGameOver, doubleScore,
   getHintCell, getHints, consumeHint, addHints,
 } from './game.js';
@@ -45,7 +45,7 @@ function applyTranslations() {
 function updateScoreUI({ score, best }) {
   if (scoreEl) scoreEl.textContent = score;
   if (bestEl) bestEl.textContent = best;
-  if (undoBtn) undoBtn.disabled = !canUndo();
+  if (undoBtn) undoBtn.disabled = !(canUndoFree() || canUndoPaid());
 }
 
 function updateHintsUI({ hints }) {
@@ -145,8 +145,10 @@ async function watchAdForHints() {
 function bindButtons() {
   document.querySelectorAll('[data-action="undo"]').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      if (canUndo()) { undo(); return; }
-      await showRewarded({ onReward: applyUndoReward });
+      if (canUndoFree()) { undo(); return; }
+      if (canUndoPaid()) {
+        await showRewarded({ onReward: applyUndoReward });
+      }
     });
   });
 
@@ -171,7 +173,12 @@ function bindButtons() {
 
   document.querySelectorAll('[data-action="continue"]').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      await showRewarded({ onReward: continueAfterGameOver });
+      await showRewarded({
+        onReward: () => {
+          continueAfterGameOver();
+          play('merge');
+        },
+      });
     });
   });
 
@@ -206,7 +213,7 @@ function bindButtonSound() {
 }
 
 async function bootstrap() {
-  if ('serviceWorker' in navigator) {
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
     try {
       await navigator.serviceWorker.register('./sw.js');
     } catch (e) {

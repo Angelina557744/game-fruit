@@ -2,17 +2,52 @@ import { BOARD_SIZE, TILES, DEFAULT_TILE } from './config.js';
 import { getBoard, isSpawned, consumeSpawned } from './state.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-
 export const MOVE_MS = 250;
 export const PULSE_MS = 160;
 export const SPAWN_MS = 200;
 
 const tiles = new Map();
 let boardEl = null;
+let gameEl = null;
+let resizeObserver = null;
+let isAnimating = false;
+let wrapEl = null;
+let layoutScheduled = false;
+let animTimer = null;
+let pendingLayout = false;
 
 export function mountBoard(el) {
   boardEl = el;
+  wrapEl = el.closest('.board-wrap');
+  gameEl = el.closest('.game');
   createCells();
+
+  if (resizeObserver) resizeObserver.disconnect();
+  resizeObserver = new ResizeObserver(scheduleLayout);
+  if (wrapEl) resizeObserver.observe(wrapEl);
+
+  window.addEventListener('orientationchange', scheduleLayout);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', scheduleLayout);
+  }
+
+  requestAnimationFrame(() => {
+    layout();
+    requestAnimationFrame(layout);
+  });
+}
+
+function scheduleLayout() {
+  if (layoutScheduled) return;
+  layoutScheduled = true;
+  requestAnimationFrame(() => {
+    layoutScheduled = false;
+    if (isAnimating) {
+      pendingLayout = true;
+      return;
+    }
+    layout();
+  });
 }
 
 function createCells() {
@@ -29,9 +64,27 @@ function createCells() {
   boardEl.appendChild(fragment);
 }
 
+function layout() {
+  if (!boardEl || !wrapEl) return;
+
+  const wrapRect = wrapEl.getBoundingClientRect();
+  const availW = wrapRect.width;
+  const availH = wrapRect.height;
+
+  if (availW < 20 || availH < 20) return;
+
+  const maxSize = Math.floor(Math.min(availW, availH, 500));
+  const gap = Math.max(4, Math.round(maxSize * 0.024));
+  const cell = (maxSize - gap * (BOARD_SIZE + 1)) / BOARD_SIZE;
+
+  boardEl.style.setProperty('--gap', `${gap}px`);
+  boardEl.style.setProperty('--cell', `${cell}px`);
+  boardEl.style.width = `${maxSize}px`;
+  boardEl.style.height = `${maxSize}px`;
+}
+
 export function renderBoard() {
   if (!boardEl) return;
-
   boardEl.querySelectorAll('.tile').forEach((el) => el.remove());
   tiles.clear();
 
@@ -77,6 +130,7 @@ function createTileEl(value, row, col, id) {
   const use = document.createElementNS(SVG_NS, 'use');
   use.setAttribute('href', `#icon-${getTileIcon(value)}`);
   svg.appendChild(use);
+
   inner.appendChild(svg);
   tile.appendChild(inner);
 
@@ -96,6 +150,9 @@ export function renderMove({ moves, absorbedIds, mergedSurvivors, spawned, onDon
     onDone?.();
     return;
   }
+
+  isAnimating = true;
+  if (animTimer) clearTimeout(animTimer);
 
   for (const m of moves) {
     const el = tiles.get(m.id);
@@ -142,6 +199,14 @@ export function renderMove({ moves, absorbedIds, mergedSurvivors, spawned, onDon
       window.setTimeout(() => el.classList.remove('tile--new'), SPAWN_MS + 30);
     }
 
-    window.setTimeout(() => onDone?.(), Math.max(PULSE_MS, SPAWN_MS));
+    animTimer = window.setTimeout(() => {
+      isAnimating = false;
+      animTimer = null;
+      if (pendingLayout) {
+        pendingLayout = false;
+        layout();
+      }
+      onDone?.();
+    }, Math.max(PULSE_MS, SPAWN_MS));
   }, MOVE_MS);
 }

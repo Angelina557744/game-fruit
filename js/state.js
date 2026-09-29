@@ -44,3 +44,18 @@ export function restore(snapshot) {
 export function markSpawned(id) { spawnedIds.add(id); }
 export function isSpawned(id) { return spawnedIds.has(id); }
 export function consumeSpawned() { spawnedIds.clear(); }
+
+
+export function removeTilesByPredicate(predicate) {
+  const removed = [];
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      const t = board[r][c];
+      if (t && predicate(t)) {
+        board[r][c] = null;
+        removed.push({ id: t.id, value: t.value, r, c });
+      }
+    }
+  }
+  return removed;
+}

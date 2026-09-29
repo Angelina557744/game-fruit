@@ -26,6 +26,7 @@ let undoUsed = false;
 let gameOver = false;
 let locked = false;
 let won = false;
+let saveCounter = 0;
 
 export function on(event, fn) {
   if (!listeners.has(event)) listeners.set(event, new Set());
@@ -42,8 +43,11 @@ function emit(event, payload) {
 export function getScore() { return score; }
 export function getBest() { return best; }
 export function getHints() { return hints; }
-export function canUndo() { return !undoUsed && undoSnapshot !== null; }
 export function isGameOver() { return gameOver; }
+
+export function canUndo() { return undoSnapshot !== null; }
+export function canUndoFree() { return !undoUsed && undoSnapshot !== null; }
+export function canUndoPaid() { return undoUsed && undoSnapshot !== null; }
 
 export function consumeHint() {
   if (hints <= 0) return false;
@@ -58,6 +62,13 @@ export function addHints(count) {
   saveHints(hints);
   emit('hints', { hints });
   return hints;
+}
+
+function maybeSaveProgress() {
+  saveCounter += 1;
+  if (saveCounter < 5) return;
+  saveCounter = 0;
+  saveProgress({ best, score, hints, savedAt: Date.now() }).catch(() => {});
 }
 
 export function move(direction) {
@@ -131,9 +142,7 @@ export function move(direction) {
     return false;
   }
 
-  if (!undoUsed) {
-    undoSnapshot = { board: snapshot, score };
-  }
+  undoSnapshot = { board: snapshot, score };
 
   score += scoreGained;
   if (score > best) {
@@ -161,7 +170,7 @@ export function move(direction) {
       }
       if (reachedWin) play('win');
       emit('gameover', { active: gameOver, score, best });
-      saveProgress({ best, score, hints, savedAt: Date.now() }).catch(() => {});
+      maybeSaveProgress();
     },
   });
 
@@ -169,12 +178,11 @@ export function move(direction) {
 }
 
 export function undo() {
-  if (locked || !canUndo()) return;
+  if (locked || !canUndoFree()) return;
 
   restore(undoSnapshot.board);
   score = undoSnapshot.score;
   undoUsed = true;
-  undoSnapshot = null;
   gameOver = false;
 
   play('undo');
@@ -191,6 +199,7 @@ export function restart() {
   gameOver = false;
   locked = false;
   won = false;
+  saveCounter = 0;
 
   spawnRandom();
   spawnRandom();
@@ -203,12 +212,13 @@ export function restart() {
 
 export function applyUndoReward() {
   if (!undoSnapshot) return false;
+
   restore(undoSnapshot.board);
   score = undoSnapshot.score;
-  undoSnapshot = null;
   undoUsed = true;
   gameOver = false;
   locked = false;
+
   play('undo');
   renderBoard();
   emit('score', { score, best });
@@ -217,10 +227,32 @@ export function applyUndoReward() {
 }
 
 export function continueAfterGameOver() {
+  const board = getBoard();
+
+  const tiles = [];
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      const t = board[r][c];
+      if (t) tiles.push({ tile: t, r, c });
+    }
+  }
+
+  tiles.sort((a, b) => a.tile.value - b.tile.value);
+
+  const toRemove = tiles.slice(0, Math.min(4, tiles.length));
+  const removedIds = new Set(toRemove.map((x) => x.tile.id));
+
+  for (const { r, c } of toRemove) {
+    clearCell(r, c);
+  }
+
+  renderBoard();
+
   gameOver = false;
   locked = false;
   emit('gameover', { active: false, score, best });
-  return true;
+
+  return { removedIds };
 }
 
 export function doubleScore() {
